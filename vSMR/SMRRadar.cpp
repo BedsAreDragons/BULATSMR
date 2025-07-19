@@ -1946,11 +1946,46 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		CPen* pqOrigPen = dc.SelectObject(&qTrailPen);
 
 		if (RtPos.GetTransponderC()) {
-			dc.MoveTo({ acPosPix.x, acPosPix.y - 6 });
-			dc.LineTo({ acPosPix.x - 6, acPosPix.y });
-			dc.LineTo({ acPosPix.x, acPosPix.y + 6 });
-			dc.LineTo({ acPosPix.x + 6, acPosPix.y });
-			dc.LineTo({ acPosPix.x, acPosPix.y - 6 });
+			Gdiplus::Point acShape[] = {
+				{ acPosPix.x + -22, acPosPix.y + -53 },
+				{ acPosPix.x + -12, acPosPix.y + -57 },
+				{ acPosPix.x + -5, acPosPix.y + -55 },
+				{ acPosPix.x + 6, acPosPix.y + -42 },
+				{ acPosPix.x + 12, acPosPix.y + -29 },
+				{ acPosPix.x + 16, acPosPix.y + -12 },
+				{ acPosPix.x + 26, acPosPix.y + -8 },
+				{ acPosPix.x + 40, acPosPix.y + -8 },
+				{ acPosPix.x + 49, acPosPix.y + -7 },
+				{ acPosPix.x + 59, acPosPix.y + -2 },
+				{ acPosPix.x + 65, acPosPix.y + 11 },
+				{ acPosPix.x + 57, acPosPix.y + 19 },
+				{ acPosPix.x + 40, acPosPix.y + 17 },
+				{ acPosPix.x + 27, acPosPix.y + 17 },
+				{ acPosPix.x + 21, acPosPix.y + 28 },
+				{ acPosPix.x + 14, acPosPix.y + 45 },
+				{ acPosPix.x + 4, acPosPix.y + 60 },
+				{ acPosPix.x + -7, acPosPix.y + 69 },
+				{ acPosPix.x + -18, acPosPix.y + 66 },
+				{ acPosPix.x + -17, acPosPix.y + 49 },
+				{ acPosPix.x + -9, acPosPix.y + 33 },
+				{ acPosPix.x + -8, acPosPix.y + 20 },
+				{ acPosPix.x + -38, acPosPix.y + 18 },
+				{ acPosPix.x + -45, acPosPix.y + 35 },
+				{ acPosPix.x + -54, acPosPix.y + 39 },
+				{ acPosPix.x + -59, acPosPix.y + 26 },
+				{ acPosPix.x + -60, acPosPix.y + 2 },
+				{ acPosPix.x + -59, acPosPix.y + -17 },
+				{ acPosPix.x + -51, acPosPix.y + -25 },
+				{ acPosPix.x + -41, acPosPix.y + -22 },
+				{ acPosPix.x + -35, acPosPix.y + -10 },
+				{ acPosPix.x + -28, acPosPix.y + -10 },
+				{ acPosPix.x + -17, acPosPix.y + -10 },
+				{ acPosPix.x + -14, acPosPix.y + -17 },
+				{ acPosPix.x + -17, acPosPix.y + -29 },
+				{ acPosPix.x + -22, acPosPix.y + -40 }
+			};
+			SolidBrush brush(Color(255, 255, 255, 0)); // Yellow fill
+			graphics.FillPolygon(&brush, acShape, sizeof(acShape) / sizeof(acShape[0]));
 		}
 		else {
 			dc.MoveTo(acPosPix.x, acPosPix.y);
