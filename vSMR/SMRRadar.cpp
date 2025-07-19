@@ -1817,7 +1817,28 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	RimcasInstance->OnRefreshBegin(isLVP);
 
 #pragma region symbols
-// Drawing radar symbols for aircraft targets
+// Helper function to draw history polygons with afterglow
+void DrawHistoryPolygon(Graphics& graphics, const std::vector<Point>& history_points, const Color& color)
+{
+    if (history_points.empty())
+        return;
+
+    SolidBrush brush(color);
+    std::vector<PointF> lpPoints;
+    lpPoints.reserve(history_points.size());
+
+    for (const auto& pt : history_points)
+    {
+        CPosition pos;
+        pos.m_Latitude = pt.x;
+        pos.m_Longitude = pt.y;
+        POINT pixel = ConvertCoordFromPositionToPixel(pos);
+        lpPoints.emplace_back(REAL(pixel.x), REAL(pixel.y));
+    }
+
+    graphics.FillPolygon(&brush, lpPoints.data(), static_cast<int>(lpPoints.size()));
+}
+
 Logger::info("Symbols loop");
 
 EuroScopePlugIn::CRadarTarget rt;
@@ -1844,68 +1865,21 @@ for (rt = GetPlugIn()->RadarTargetSelectFirst(); rt.IsValid(); rt = GetPlugIn()-
     if (rt.GetGS() > 5)
     {
         CRadarTargetPositionData pAcPos = rt.GetPosition();
-        POINT oldacPosPix;
 
         // Draw history polygons with afterglow effect if enabled
-        for (int i = 1; i <= 2; ++i)
+        if (Afterglow && CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
         {
-            oldacPosPix = ConvertCoordFromPositionToPixel(pAcPos.GetPosition());
-            pAcPos = rt.GetPreviousPosition(pAcPos);
-            acPosPix = ConvertCoordFromPositionToPixel(pAcPos.GetPosition());
-
-            if (i == 1 && !Patatoides[rt.GetCallsign()].History_one_points.empty() &&
-                Afterglow && CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
-            {
-                SolidBrush brush(ColorManager->get_corrected_color("afterglow",
+            DrawHistoryPolygon(graphics, Patatoides[rt.GetCallsign()].History_one_points,
+                ColorManager->get_corrected_color("afterglow",
                     CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["history_one_color"])));
 
-                PointF lpPoints[100];
-                for (size_t i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_one_points.size(); ++i1)
-                {
-                    CPosition pos;
-                    pos.m_Latitude = Patatoides[rt.GetCallsign()].History_one_points[i1].x;
-                    pos.m_Longitude = Patatoides[rt.GetCallsign()].History_one_points[i1].y;
-                    lpPoints[i1] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
-                }
-                graphics.FillPolygon(&brush, lpPoints, static_cast<int>(Patatoides[rt.GetCallsign()].History_one_points.size()));
-            }
+            DrawHistoryPolygon(graphics, Patatoides[rt.GetCallsign()].History_two_points,
+                ColorManager->get_corrected_color("afterglow",
+                    CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["history_two_color"])));
 
-            if (i != 2)
-            {
-                if (!Patatoides[rt.GetCallsign()].History_two_points.empty() &&
-                    Afterglow && CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
-                {
-                    SolidBrush brush(ColorManager->get_corrected_color("afterglow",
-                        CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["history_two_color"])));
-
-                    PointF lpPoints[100];
-                    for (size_t i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_two_points.size(); ++i1)
-                    {
-                        CPosition pos;
-                        pos.m_Latitude = Patatoides[rt.GetCallsign()].History_two_points[i1].x;
-                        pos.m_Longitude = Patatoides[rt.GetCallsign()].History_two_points[i1].y;
-                        lpPoints[i1] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
-                    }
-                    graphics.FillPolygon(&brush, lpPoints, static_cast<int>(Patatoides[rt.GetCallsign()].History_two_points.size()));
-                }
-            }
-
-            if (i == 2 && !Patatoides[rt.GetCallsign()].History_three_points.empty() &&
-                Afterglow && CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
-            {
-                SolidBrush brush(ColorManager->get_corrected_color("afterglow",
+            DrawHistoryPolygon(graphics, Patatoides[rt.GetCallsign()].History_three_points,
+                ColorManager->get_corrected_color("afterglow",
                     CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["history_three_color"])));
-
-                PointF lpPoints[100];
-                for (size_t i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_three_points.size(); ++i1)
-                {
-                    CPosition pos;
-                    pos.m_Latitude = Patatoides[rt.GetCallsign()].History_three_points[i1].x;
-                    pos.m_Longitude = Patatoides[rt.GetCallsign()].History_three_points[i1].y;
-                    lpPoints[i1] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
-                }
-                graphics.FillPolygon(&brush, lpPoints, static_cast<int>(Patatoides[rt.GetCallsign()].History_three_points.size()));
-            }
         }
 
         // Draw trail points based on ground or approach speeds
@@ -1915,7 +1889,7 @@ for (rt = GetPlugIn()->RadarTargetSelectFirst(); rt.IsValid(); rt = GetPlugIn()-
         {
             POINT pCoord = ConvertCoordFromPositionToPixel(previousPos.GetPosition());
             graphics.FillRectangle(&SolidBrush(ColorManager->get_corrected_color("symbol", Gdiplus::Color::White)),
-                                   pCoord.x - 1, pCoord.y - 1, 2, 2);
+                pCoord.x - 1, pCoord.y - 1, 2, 2);
             previousPos = rt.GetPreviousPosition(previousPos);
         }
     }
@@ -1923,19 +1897,24 @@ for (rt = GetPlugIn()->RadarTargetSelectFirst(); rt.IsValid(); rt = GetPlugIn()-
     // Draw primary target polygon if enabled
     if (CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
     {
-        SolidBrush brush(ColorManager->get_corrected_color("afterglow",
-            CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["target_color"])));
-
-        PointF lpPoints[100];
         const auto& points = Patatoides[rt.GetCallsign()].points;
-        for (size_t i = 0; i < points.size(); ++i)
+        if (!points.empty())
         {
-            CPosition pos;
-            pos.m_Latitude = points[i].x;
-            pos.m_Longitude = points[i].y;
-            lpPoints[i] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
+            SolidBrush brush(ColorManager->get_corrected_color("afterglow",
+                CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["target_color"])));
+
+            std::vector<PointF> lpPoints;
+            lpPoints.reserve(points.size());
+            for (const auto& pt : points)
+            {
+                CPosition pos;
+                pos.m_Latitude = pt.x;
+                pos.m_Longitude = pt.y;
+                POINT pixel = ConvertCoordFromPositionToPixel(pos);
+                lpPoints.emplace_back(REAL(pixel.x), REAL(pixel.y));
+            }
+            graphics.FillPolygon(&brush, lpPoints.data(), static_cast<int>(lpPoints.size()));
         }
-        graphics.FillPolygon(&brush, lpPoints, static_cast<int>(points.size()));
     }
 
     acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
@@ -1950,7 +1929,6 @@ for (rt = GetPlugIn()->RadarTargetSelectFirst(); rt.IsValid(); rt = GetPlugIn()-
 
     if (RtPos.GetTransponderC())
     {
-        // Draw new plane shape scaled at 10% size
         const float scale = 0.1f;
         Gdiplus::Point acShape[] = {
             { acPosPix.x + int(-22 * scale), acPosPix.y + int(-53 * scale) },
@@ -1995,7 +1973,6 @@ for (rt = GetPlugIn()->RadarTargetSelectFirst(); rt.IsValid(); rt = GetPlugIn()-
     }
     else
     {
-        // Draw a simple cross symbol scaled
         const int offset = std::max(1, static_cast<int>(4 * 0.1f));
         dc.MoveTo(acPosPix.x, acPosPix.y);
         dc.LineTo(acPosPix.x - offset, acPosPix.y - offset);
@@ -2022,39 +1999,15 @@ for (rt = GetPlugIn()->RadarTargetSelectFirst(); rt.IsValid(); rt = GetPlugIn()-
     }
 
     // Draw mouse-over highlights
-    if (mouseWithin({ acPosPix.x - 5, acPosPix.y - 5, acPosPix.x + 5, acPosPix.y + 5 }))
+    if (mouseWithin({ acPosPix.x - 5, acPosPix.y - 5, 10, 10 }))
     {
-        dc.MoveTo(acPosPix.x, acPosPix.y - 8);
-        dc.LineTo(acPosPix.x - 6, acPosPix.y - 12);
-        dc.MoveTo(acPosPix.x, acPosPix.y - 8);
-        dc.LineTo(acPosPix.x + 6, acPosPix.y - 12);
-
-        dc.MoveTo(acPosPix.x, acPosPix.y + 8);
-        dc.LineTo(acPosPix.x - 6, acPosPix.y + 12);
-        dc.MoveTo(acPosPix.x, acPosPix.y + 8);
-        dc.LineTo(acPosPix.x + 6, acPosPix.y + 12);
-
-        dc.MoveTo(acPosPix.x - 8, acPosPix.y);
-        dc.LineTo(acPosPix.x - 12, acPosPix.y - 6);
-        dc.MoveTo(acPosPix.x - 8, acPosPix.y);
-        dc.LineTo(acPosPix.x - 12, acPosPix.y + 6);
-
-        dc.MoveTo(acPosPix.x + 8, acPosPix.y);
-        dc.LineTo(acPosPix.x + 12, acPosPix.y - 6);
-        dc.MoveTo(acPosPix.x + 8, acPosPix.y);
-        dc.LineTo(acPosPix.x + 12, acPosPix.y + 6);
+        SolidBrush brush(ColorManager->get_corrected_color("afterglow",
+            CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["mouse_over_box_color"])));
+        graphics.FillRectangle(&brush, acPosPix.x - 15, acPosPix.y - 15, 30, 30);
     }
-
-    // Add screen object for hit testing, display, etc.
-    AddScreenObject(DRAWING_AC_SYMBOL, rt.GetCallsign(),
-                    { acPosPix.x - 5, acPosPix.y - 5, acPosPix.x + 5, acPosPix.y + 5 },
-                    false,
-                    AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetCallsign(),
-                    "", "", rt);
 
     dc.SelectObject(pqOrigPen);
 }
-
 #pragma endregion Drawing of the symbols
 
 	TimePopupData.clear();
