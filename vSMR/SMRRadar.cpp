@@ -1946,57 +1946,61 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 		CPen* pqOrigPen = dc.SelectObject(&qTrailPen);
 
 		if (RtPos.GetTransponderC()) {
-			Gdiplus::Point acShape[] = {
-				{ acPosPix.x + -22, acPosPix.y + -53 },
-				{ acPosPix.x + -12, acPosPix.y + -57 },
-				{ acPosPix.x + -5, acPosPix.y + -55 },
-				{ acPosPix.x + 6, acPosPix.y + -42 },
-				{ acPosPix.x + 12, acPosPix.y + -29 },
-				{ acPosPix.x + 16, acPosPix.y + -12 },
-				{ acPosPix.x + 26, acPosPix.y + -8 },
-				{ acPosPix.x + 40, acPosPix.y + -8 },
-				{ acPosPix.x + 49, acPosPix.y + -7 },
-				{ acPosPix.x + 59, acPosPix.y + -2 },
-				{ acPosPix.x + 65, acPosPix.y + 11 },
-				{ acPosPix.x + 57, acPosPix.y + 19 },
-				{ acPosPix.x + 40, acPosPix.y + 17 },
-				{ acPosPix.x + 27, acPosPix.y + 17 },
-				{ acPosPix.x + 21, acPosPix.y + 28 },
-				{ acPosPix.x + 14, acPosPix.y + 45 },
-				{ acPosPix.x + 4, acPosPix.y + 60 },
-				{ acPosPix.x + -7, acPosPix.y + 69 },
-				{ acPosPix.x + -18, acPosPix.y + 66 },
-				{ acPosPix.x + -17, acPosPix.y + 49 },
-				{ acPosPix.x + -9, acPosPix.y + 33 },
-				{ acPosPix.x + -8, acPosPix.y + 20 },
-				{ acPosPix.x + -38, acPosPix.y + 18 },
-				{ acPosPix.x + -45, acPosPix.y + 35 },
-				{ acPosPix.x + -54, acPosPix.y + 39 },
-				{ acPosPix.x + -59, acPosPix.y + 26 },
-				{ acPosPix.x + -60, acPosPix.y + 2 },
-				{ acPosPix.x + -59, acPosPix.y + -17 },
-				{ acPosPix.x + -51, acPosPix.y + -25 },
-				{ acPosPix.x + -41, acPosPix.y + -22 },
-				{ acPosPix.x + -35, acPosPix.y + -10 },
-				{ acPosPix.x + -28, acPosPix.y + -10 },
-				{ acPosPix.x + -17, acPosPix.y + -10 },
-				{ acPosPix.x + -14, acPosPix.y + -17 },
-				{ acPosPix.x + -17, acPosPix.y + -29 },
-				{ acPosPix.x + -22, acPosPix.y + -40 }
-			};
-			SolidBrush brush(Color(255, 255, 255, 0)); // Yellow fill
-			graphics.FillPolygon(&brush, acShape, sizeof(acShape) / sizeof(acShape[0]));
+	    	const float scale = 0.1f;  // 10% of original size (really small)
+	   	Gdiplus::Point acShape[] = {
+		        { acPosPix.x + static_cast<int>(-22 * scale), acPosPix.y + static_cast<int>(-53 * scale) },
+		        { acPosPix.x + static_cast<int>(-12 * scale), acPosPix.y + static_cast<int>(-57 * scale) },
+		        { acPosPix.x + static_cast<int>(-5 * scale),  acPosPix.y + static_cast<int>(-55 * scale) },
+		        { acPosPix.x + static_cast<int>(6 * scale),   acPosPix.y + static_cast<int>(-42 * scale) },
+		        { acPosPix.x + static_cast<int>(12 * scale),  acPosPix.y + static_cast<int>(-29 * scale) },
+		        { acPosPix.x + static_cast<int>(16 * scale),  acPosPix.y + static_cast<int>(-12 * scale) },
+		        { acPosPix.x + static_cast<int>(26 * scale),  acPosPix.y + static_cast<int>(-8 * scale) },
+		        { acPosPix.x + static_cast<int>(40 * scale),  acPosPix.y + static_cast<int>(-8 * scale) },
+		        { acPosPix.x + static_cast<int>(49 * scale),  acPosPix.y + static_cast<int>(-7 * scale) },
+		        { acPosPix.x + static_cast<int>(59 * scale),  acPosPix.y + static_cast<int>(-2 * scale) },
+		        { acPosPix.x + static_cast<int>(65 * scale),  acPosPix.y + static_cast<int>(11 * scale) },
+		        { acPosPix.x + static_cast<int>(57 * scale),  acPosPix.y + static_cast<int>(19 * scale) },
+		        { acPosPix.x + static_cast<int>(40 * scale),  acPosPix.y + static_cast<int>(17 * scale) },
+		        { acPosPix.x + static_cast<int>(27 * scale),  acPosPix.y + static_cast<int>(17 * scale) },
+		        { acPosPix.x + static_cast<int>(21 * scale),  acPosPix.y + static_cast<int>(28 * scale) },
+		        { acPosPix.x + static_cast<int>(14 * scale),  acPosPix.y + static_cast<int>(45 * scale) },
+		        { acPosPix.x + static_cast<int>(4 * scale),   acPosPix.y + static_cast<int>(60 * scale) },
+		        { acPosPix.x + static_cast<int>(-7 * scale),  acPosPix.y + static_cast<int>(69 * scale) },
+		        { acPosPix.x + static_cast<int>(-18 * scale), acPosPix.y + static_cast<int>(66 * scale) },
+		        { acPosPix.x + static_cast<int>(-17 * scale), acPosPix.y + static_cast<int>(49 * scale) },
+		        { acPosPix.x + static_cast<int>(-9 * scale),  acPosPix.y + static_cast<int>(33 * scale) },
+		        { acPosPix.x + static_cast<int>(-8 * scale),  acPosPix.y + static_cast<int>(20 * scale) },
+		        { acPosPix.x + static_cast<int>(-38 * scale), acPosPix.y + static_cast<int>(18 * scale) },
+		        { acPosPix.x + static_cast<int>(-45 * scale), acPosPix.y + static_cast<int>(35 * scale) },
+		        { acPosPix.x + static_cast<int>(-54 * scale), acPosPix.y + static_cast<int>(39 * scale) },
+		        { acPosPix.x + static_cast<int>(-59 * scale), acPosPix.y + static_cast<int>(26 * scale) },
+		        { acPosPix.x + static_cast<int>(-60 * scale), acPosPix.y + static_cast<int>(2 * scale) },
+		        { acPosPix.x + static_cast<int>(-59 * scale), acPosPix.y + static_cast<int>(-17 * scale) },
+		        { acPosPix.x + static_cast<int>(-51 * scale), acPosPix.y + static_cast<int>(-25 * scale) },
+		        { acPosPix.x + static_cast<int>(-41 * scale), acPosPix.y + static_cast<int>(-22 * scale) },
+		        { acPosPix.x + static_cast<int>(-35 * scale), acPosPix.y + static_cast<int>(-10 * scale) },
+		        { acPosPix.x + static_cast<int>(-28 * scale), acPosPix.y + static_cast<int>(-10 * scale) },
+		        { acPosPix.x + static_cast<int>(-17 * scale), acPosPix.y + static_cast<int>(-10 * scale) },
+		        { acPosPix.x + static_cast<int>(-14 * scale), acPosPix.y + static_cast<int>(-17 * scale) },
+		        { acPosPix.x + static_cast<int>(-17 * scale), acPosPix.y + static_cast<int>(-29 * scale) },
+		        { acPosPix.x + static_cast<int>(-22 * scale), acPosPix.y + static_cast<int>(-40 * scale) }
+		    };
+		    SolidBrush brush(Color(255, 255, 255, 0)); // Yellow fill
+		    graphics.FillPolygon(&brush, acShape, sizeof(acShape) / sizeof(acShape[0]));
 		}
 		else {
-			dc.MoveTo(acPosPix.x, acPosPix.y);
-			dc.LineTo(acPosPix.x - 4, acPosPix.y - 4);
-			dc.MoveTo(acPosPix.x, acPosPix.y);
-			dc.LineTo(acPosPix.x + 4, acPosPix.y - 4);
-			dc.MoveTo(acPosPix.x, acPosPix.y);
-			dc.LineTo(acPosPix.x - 4, acPosPix.y + 4);
-			dc.MoveTo(acPosPix.x, acPosPix.y);
-			dc.LineTo(acPosPix.x + 4, acPosPix.y + 4);
+		    // Scale the lines too
+		    const int offset = max(1, static_cast<int>(4 * 0.1f));  // ensure offset is at least 1 pixel
+		    dc.MoveTo(acPosPix.x, acPosPix.y);
+		    dc.LineTo(acPosPix.x - offset, acPosPix.y - offset);
+		    dc.MoveTo(acPosPix.x, acPosPix.y);
+		    dc.LineTo(acPosPix.x + offset, acPosPix.y - offset);
+		    dc.MoveTo(acPosPix.x, acPosPix.y);
+		    dc.LineTo(acPosPix.x - offset, acPosPix.y + offset);
+		    dc.MoveTo(acPosPix.x, acPosPix.y);
+		    dc.LineTo(acPosPix.x + offset, acPosPix.y + offset);
 		}
+
 
 		// Predicted Track Line
 		// It starts 20 seconds away from the ac
