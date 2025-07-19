@@ -43,9 +43,26 @@ install:
 configuration: Release
 
 build_script:
-  - ps: (Get-Content  C:\projects\vsmr\vSMR\SMRPlugin.hpp).replace('@appveyor_build', $Env:appveyor_build_version) | Set-Content  C:\projects\vsmr\vSMR\SMRPlugin.hpp
-  - ps: (Get-Content  C:\projects\vsmr\vSMR\vSMR.rc).replace('@appveyor_build', $Env:appveyor_build_version) | Set-Content  C:\projects\vsmr\vSMR\vSMR.rc
-  - cmd: msbuild "C:\projects\vsmr\vSMR.sln" /m /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+  - ps: |
+      $file1 = "C:\projects\bulatsmr\vSMR\SMRPlugin.hpp"
+      if (Test-Path $file1) {
+        (Get-Content $file1) -replace '@appveyor_build', $Env:APPVEYOR_BUILD_VERSION | Set-Content $file1
+      } else {
+        Write-Error "File not found: $file1"
+        exit 1
+      }
+
+  - ps: |
+      $file2 = "C:\projects\bulatsmr\vSMR\vSMR.rc"
+      if (Test-Path $file2) {
+        (Get-Content $file2) -replace '@appveyor_build', $Env:APPVEYOR_BUILD_VERSION | Set-Content $file2
+      } else {
+        Write-Error "File not found: $file2"
+        exit 1
+      }
+
+  - cmd: msbuild "C:\projects\bulatsmr\vSMR.sln" /m /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
 
 after_build:
   - cmd: mkdir vSMR-nightly
