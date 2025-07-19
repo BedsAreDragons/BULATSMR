@@ -1817,231 +1817,243 @@ void CSMRRadar::OnRefresh(HDC hDC, int Phase)
 	RimcasInstance->OnRefreshBegin(isLVP);
 
 #pragma region symbols
-	// Drawing the symbols
-	Logger::info("Symbols loop");
-	EuroScopePlugIn::CRadarTarget rt;
-	for (rt = GetPlugIn()->RadarTargetSelectFirst();
-		rt.IsValid();
-		rt = GetPlugIn()->RadarTargetSelectNext(rt))
-	{
-		if (!rt.IsValid() || !rt.GetPosition().IsValid())
-			continue;
+// Drawing radar symbols for aircraft targets
+Logger::info("Symbols loop");
 
-		int reportedGs = rt.GetPosition().GetReportedGS();
-		int radarRange = CurrentConfig->getActiveProfile()["filters"]["radar_range_nm"].GetInt();
-		int altitudeFilter = CurrentConfig->getActiveProfile()["filters"]["hide_above_alt"].GetInt();
-		int speedFilter = CurrentConfig->getActiveProfile()["filters"]["hide_above_spd"].GetInt();
-		bool isAcDisplayed = isVisible(rt);
+EuroScopePlugIn::CRadarTarget rt;
+for (rt = GetPlugIn()->RadarTargetSelectFirst(); rt.IsValid(); rt = GetPlugIn()->RadarTargetSelectNext(rt))
+{
+    if (!rt.IsValid() || !rt.GetPosition().IsValid())
+        continue;
 
-		if (!isAcDisplayed)
-			continue;
+    // Get config filters
+    const int radarRange = CurrentConfig->getActiveProfile()["filters"]["radar_range_nm"].GetInt();
+    const int altitudeFilter = CurrentConfig->getActiveProfile()["filters"]["hide_above_alt"].GetInt();
+    const int speedFilter = CurrentConfig->getActiveProfile()["filters"]["hide_above_spd"].GetInt();
+    const bool isAcDisplayed = isVisible(rt);
 
-		RimcasInstance->OnRefresh(rt, this, IsCorrelated(GetPlugIn()->FlightPlanSelect(rt.GetCallsign()), rt));
+    if (!isAcDisplayed)
+        continue;
 
-		CRadarTargetPositionData RtPos = rt.GetPosition();
+    RimcasInstance->OnRefresh(rt, this, IsCorrelated(GetPlugIn()->FlightPlanSelect(rt.GetCallsign()), rt));
 
-		POINT acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
+    const CRadarTargetPositionData RtPos = rt.GetPosition();
+    POINT acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
+    const int reportedGs = rt.GetPosition().GetReportedGS();
 
-		if (rt.GetGS() > 5) {
-			POINT oldacPosPix;
-			CRadarTargetPositionData pAcPos = rt.GetPosition();
+    if (rt.GetGS() > 5)
+    {
+        CRadarTargetPositionData pAcPos = rt.GetPosition();
+        POINT oldacPosPix;
 
-			for (int i = 1; i <= 2; i++) {
-				oldacPosPix = ConvertCoordFromPositionToPixel(pAcPos.GetPosition());
-				pAcPos = rt.GetPreviousPosition(pAcPos);
-				acPosPix = ConvertCoordFromPositionToPixel(pAcPos.GetPosition());
+        // Draw history polygons with afterglow effect if enabled
+        for (int i = 1; i <= 2; ++i)
+        {
+            oldacPosPix = ConvertCoordFromPositionToPixel(pAcPos.GetPosition());
+            pAcPos = rt.GetPreviousPosition(pAcPos);
+            acPosPix = ConvertCoordFromPositionToPixel(pAcPos.GetPosition());
 
-				if (i == 1 && !Patatoides[rt.GetCallsign()].History_one_points.empty() && Afterglow && CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool()) {
-					SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow",
-						CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["history_one_color"])));
+            if (i == 1 && !Patatoides[rt.GetCallsign()].History_one_points.empty() &&
+                Afterglow && CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
+            {
+                SolidBrush brush(ColorManager->get_corrected_color("afterglow",
+                    CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["history_one_color"])));
 
-					PointF lpPoints[100];
-					for (unsigned int i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_one_points.size(); i1++)
-					{
-						CPosition pos;
-						pos.m_Latitude = Patatoides[rt.GetCallsign()].History_one_points[i1].x;
-						pos.m_Longitude = Patatoides[rt.GetCallsign()].History_one_points[i1].y;
+                PointF lpPoints[100];
+                for (size_t i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_one_points.size(); ++i1)
+                {
+                    CPosition pos;
+                    pos.m_Latitude = Patatoides[rt.GetCallsign()].History_one_points[i1].x;
+                    pos.m_Longitude = Patatoides[rt.GetCallsign()].History_one_points[i1].y;
+                    lpPoints[i1] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
+                }
+                graphics.FillPolygon(&brush, lpPoints, static_cast<int>(Patatoides[rt.GetCallsign()].History_one_points.size()));
+            }
 
-						lpPoints[i1] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
-					}
-					graphics.FillPolygon(&H_Brush, lpPoints, Patatoides[rt.GetCallsign()].History_one_points.size());
-				}
+            if (i != 2)
+            {
+                if (!Patatoides[rt.GetCallsign()].History_two_points.empty() &&
+                    Afterglow && CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
+                {
+                    SolidBrush brush(ColorManager->get_corrected_color("afterglow",
+                        CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["history_two_color"])));
 
-				if (i != 2) {
-					if (!Patatoides[rt.GetCallsign()].History_two_points.empty() && Afterglow && CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool()) {
-						SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow",
-							CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["history_two_color"])));
+                    PointF lpPoints[100];
+                    for (size_t i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_two_points.size(); ++i1)
+                    {
+                        CPosition pos;
+                        pos.m_Latitude = Patatoides[rt.GetCallsign()].History_two_points[i1].x;
+                        pos.m_Longitude = Patatoides[rt.GetCallsign()].History_two_points[i1].y;
+                        lpPoints[i1] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
+                    }
+                    graphics.FillPolygon(&brush, lpPoints, static_cast<int>(Patatoides[rt.GetCallsign()].History_two_points.size()));
+                }
+            }
 
-						PointF lpPoints[100];
-						for (unsigned int i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_two_points.size(); i1++)
-						{
-							CPosition pos;
-							pos.m_Latitude = Patatoides[rt.GetCallsign()].History_two_points[i1].x;
-							pos.m_Longitude = Patatoides[rt.GetCallsign()].History_two_points[i1].y;
+            if (i == 2 && !Patatoides[rt.GetCallsign()].History_three_points.empty() &&
+                Afterglow && CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
+            {
+                SolidBrush brush(ColorManager->get_corrected_color("afterglow",
+                    CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["history_three_color"])));
 
-							lpPoints[i1] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
-						}
-						graphics.FillPolygon(&H_Brush, lpPoints, Patatoides[rt.GetCallsign()].History_two_points.size());
-					}
-				}
+                PointF lpPoints[100];
+                for (size_t i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_three_points.size(); ++i1)
+                {
+                    CPosition pos;
+                    pos.m_Latitude = Patatoides[rt.GetCallsign()].History_three_points[i1].x;
+                    pos.m_Longitude = Patatoides[rt.GetCallsign()].History_three_points[i1].y;
+                    lpPoints[i1] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
+                }
+                graphics.FillPolygon(&brush, lpPoints, static_cast<int>(Patatoides[rt.GetCallsign()].History_three_points.size()));
+            }
+        }
 
-				if (i == 2 && !Patatoides[rt.GetCallsign()].History_three_points.empty() && Afterglow && CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool()) {
-					SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow",
-						CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["history_three_color"])));
+        // Draw trail points based on ground or approach speeds
+        int TrailNumber = (reportedGs > 50) ? Trail_App : Trail_Gnd;
+        CRadarTargetPositionData previousPos = rt.GetPreviousPosition(rt.GetPosition());
+        for (int j = 1; j <= TrailNumber; ++j)
+        {
+            POINT pCoord = ConvertCoordFromPositionToPixel(previousPos.GetPosition());
+            graphics.FillRectangle(&SolidBrush(ColorManager->get_corrected_color("symbol", Gdiplus::Color::White)),
+                                   pCoord.x - 1, pCoord.y - 1, 2, 2);
+            previousPos = rt.GetPreviousPosition(previousPos);
+        }
+    }
 
-					PointF lpPoints[100];
-					for (unsigned int i1 = 0; i1 < Patatoides[rt.GetCallsign()].History_three_points.size(); i1++)
-					{
-						CPosition pos;
-						pos.m_Latitude = Patatoides[rt.GetCallsign()].History_three_points[i1].x;
-						pos.m_Longitude = Patatoides[rt.GetCallsign()].History_three_points[i1].y;
+    // Draw primary target polygon if enabled
+    if (CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool())
+    {
+        SolidBrush brush(ColorManager->get_corrected_color("afterglow",
+            CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["target_color"])));
 
-						lpPoints[i1] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
-					}
-					graphics.FillPolygon(&H_Brush, lpPoints, Patatoides[rt.GetCallsign()].History_three_points.size());
-				}
-			}
+        PointF lpPoints[100];
+        const auto& points = Patatoides[rt.GetCallsign()].points;
+        for (size_t i = 0; i < points.size(); ++i)
+        {
+            CPosition pos;
+            pos.m_Latitude = points[i].x;
+            pos.m_Longitude = points[i].y;
+            lpPoints[i] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
+        }
+        graphics.FillPolygon(&brush, lpPoints, static_cast<int>(points.size()));
+    }
 
-			int TrailNumber = Trail_Gnd;
-			if (reportedGs > 50)
-				TrailNumber = Trail_App;
+    acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
+    const bool AcisCorrelated = IsCorrelated(GetPlugIn()->FlightPlanSelect(rt.GetCallsign()), rt);
 
-			CRadarTargetPositionData previousPos = rt.GetPreviousPosition(rt.GetPosition());
-			for (int j = 1; j <= TrailNumber; j++) {
-				POINT pCoord = ConvertCoordFromPositionToPixel(previousPos.GetPosition());
+    if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
+        continue;
 
-				graphics.FillRectangle(&SolidBrush(ColorManager->get_corrected_color("symbol", Gdiplus::Color::White)),
-					pCoord.x - 1, pCoord.y - 1, 2, 2);
+    // Draw aircraft symbol
+    CPen qTrailPen(PS_SOLID, 1, ColorManager->get_corrected_color("symbol", Gdiplus::Color::White).ToCOLORREF());
+    CPen* pqOrigPen = dc.SelectObject(&qTrailPen);
 
-				previousPos = rt.GetPreviousPosition(previousPos);
-			}
-		}
+    if (RtPos.GetTransponderC())
+    {
+        // Draw new plane shape scaled at 10% size
+        const float scale = 0.1f;
+        Gdiplus::Point acShape[] = {
+            { acPosPix.x + int(-22 * scale), acPosPix.y + int(-53 * scale) },
+            { acPosPix.x + int(-12 * scale), acPosPix.y + int(-57 * scale) },
+            { acPosPix.x + int(-5  * scale), acPosPix.y + int(-55 * scale) },
+            { acPosPix.x + int(6   * scale), acPosPix.y + int(-42 * scale) },
+            { acPosPix.x + int(12  * scale), acPosPix.y + int(-29 * scale) },
+            { acPosPix.x + int(16  * scale), acPosPix.y + int(-12 * scale) },
+            { acPosPix.x + int(26  * scale), acPosPix.y + int(-8  * scale) },
+            { acPosPix.x + int(40  * scale), acPosPix.y + int(-8  * scale) },
+            { acPosPix.x + int(49  * scale), acPosPix.y + int(-7  * scale) },
+            { acPosPix.x + int(59  * scale), acPosPix.y + int(-2  * scale) },
+            { acPosPix.x + int(65  * scale), acPosPix.y + int(11   * scale) },
+            { acPosPix.x + int(57  * scale), acPosPix.y + int(19   * scale) },
+            { acPosPix.x + int(40  * scale), acPosPix.y + int(17   * scale) },
+            { acPosPix.x + int(27  * scale), acPosPix.y + int(17   * scale) },
+            { acPosPix.x + int(21  * scale), acPosPix.y + int(28   * scale) },
+            { acPosPix.x + int(14  * scale), acPosPix.y + int(45   * scale) },
+            { acPosPix.x + int(4   * scale), acPosPix.y + int(60   * scale) },
+            { acPosPix.x + int(-7  * scale), acPosPix.y + int(69   * scale) },
+            { acPosPix.x + int(-18 * scale), acPosPix.y + int(66   * scale) },
+            { acPosPix.x + int(-17 * scale), acPosPix.y + int(49   * scale) },
+            { acPosPix.x + int(-9  * scale), acPosPix.y + int(33   * scale) },
+            { acPosPix.x + int(-8  * scale), acPosPix.y + int(20   * scale) },
+            { acPosPix.x + int(-38 * scale), acPosPix.y + int(18   * scale) },
+            { acPosPix.x + int(-45 * scale), acPosPix.y + int(35   * scale) },
+            { acPosPix.x + int(-54 * scale), acPosPix.y + int(39   * scale) },
+            { acPosPix.x + int(-59 * scale), acPosPix.y + int(26   * scale) },
+            { acPosPix.x + int(-60 * scale), acPosPix.y + int(2    * scale) },
+            { acPosPix.x + int(-59 * scale), acPosPix.y + int(-17  * scale) },
+            { acPosPix.x + int(-51 * scale), acPosPix.y + int(-25  * scale) },
+            { acPosPix.x + int(-41 * scale), acPosPix.y + int(-22  * scale) },
+            { acPosPix.x + int(-35 * scale), acPosPix.y + int(-10  * scale) },
+            { acPosPix.x + int(-28 * scale), acPosPix.y + int(-10  * scale) },
+            { acPosPix.x + int(-17 * scale), acPosPix.y + int(-10  * scale) },
+            { acPosPix.x + int(-14 * scale), acPosPix.y + int(-17  * scale) },
+            { acPosPix.x + int(-17 * scale), acPosPix.y + int(-29  * scale) },
+            { acPosPix.x + int(-22 * scale), acPosPix.y + int(-40  * scale) }
+        };
+        SolidBrush brush(Color(255, 255, 255, 0)); // Transparent or white fill
+        graphics.FillPolygon(&brush, acShape, sizeof(acShape) / sizeof(acShape[0]));
+    }
+    else
+    {
+        // Draw a simple cross symbol scaled
+        const int offset = std::max(1, static_cast<int>(4 * 0.1f));
+        dc.MoveTo(acPosPix.x, acPosPix.y);
+        dc.LineTo(acPosPix.x - offset, acPosPix.y - offset);
+        dc.MoveTo(acPosPix.x, acPosPix.y);
+        dc.LineTo(acPosPix.x + offset, acPosPix.y - offset);
+        dc.MoveTo(acPosPix.x, acPosPix.y);
+        dc.LineTo(acPosPix.x - offset, acPosPix.y + offset);
+        dc.MoveTo(acPosPix.x, acPosPix.y);
+        dc.LineTo(acPosPix.x + offset, acPosPix.y + offset);
+    }
 
+    // Draw predicted track line if speed is high enough and prediction enabled
+    if (reportedGs > 50 && PredictedLength > 0)
+    {
+        double speedMS = static_cast<double>(reportedGs) * 0.514444;
+        double dStart = speedMS * 10;  // 10 seconds ahead
+        CPosition AwayBase = BetterHarversine(RtPos.GetPosition(), rt.GetTrackHeading(), dStart);
 
-		if (CurrentConfig->getActiveProfile()["targets"]["show_primary_target"].GetBool()) {
+        double dEnd = speedMS * (PredictedLength * 60) - 10;
+        CPosition PredictedEnd = BetterHarversine(AwayBase, rt.GetTrackHeading(), dEnd);
 
-			SolidBrush H_Brush(ColorManager->get_corrected_color("afterglow",
-				CurrentConfig->getConfigColor(CurrentConfig->getActiveProfile()["targets"]["target_color"])));
+        dc.MoveTo(ConvertCoordFromPositionToPixel(AwayBase));
+        dc.LineTo(ConvertCoordFromPositionToPixel(PredictedEnd));
+    }
 
-			PointF lpPoints[100];
-			for (unsigned int i = 0; i < Patatoides[rt.GetCallsign()].points.size(); i++)
-			{
-				CPosition pos;
-				pos.m_Latitude = Patatoides[rt.GetCallsign()].points[i].x;
-				pos.m_Longitude = Patatoides[rt.GetCallsign()].points[i].y;
+    // Draw mouse-over highlights
+    if (mouseWithin({ acPosPix.x - 5, acPosPix.y - 5, acPosPix.x + 5, acPosPix.y + 5 }))
+    {
+        dc.MoveTo(acPosPix.x, acPosPix.y - 8);
+        dc.LineTo(acPosPix.x - 6, acPosPix.y - 12);
+        dc.MoveTo(acPosPix.x, acPosPix.y - 8);
+        dc.LineTo(acPosPix.x + 6, acPosPix.y - 12);
 
-				lpPoints[i] = { REAL(ConvertCoordFromPositionToPixel(pos).x), REAL(ConvertCoordFromPositionToPixel(pos).y) };
-			}
+        dc.MoveTo(acPosPix.x, acPosPix.y + 8);
+        dc.LineTo(acPosPix.x - 6, acPosPix.y + 12);
+        dc.MoveTo(acPosPix.x, acPosPix.y + 8);
+        dc.LineTo(acPosPix.x + 6, acPosPix.y + 12);
 
-			graphics.FillPolygon(&H_Brush, lpPoints, Patatoides[rt.GetCallsign()].points.size());
-		}
-		acPosPix = ConvertCoordFromPositionToPixel(RtPos.GetPosition());
+        dc.MoveTo(acPosPix.x - 8, acPosPix.y);
+        dc.LineTo(acPosPix.x - 12, acPosPix.y - 6);
+        dc.MoveTo(acPosPix.x - 8, acPosPix.y);
+        dc.LineTo(acPosPix.x - 12, acPosPix.y + 6);
 
-		bool AcisCorrelated = IsCorrelated(GetPlugIn()->FlightPlanSelect(rt.GetCallsign()), rt);
+        dc.MoveTo(acPosPix.x + 8, acPosPix.y);
+        dc.LineTo(acPosPix.x + 12, acPosPix.y - 6);
+        dc.MoveTo(acPosPix.x + 8, acPosPix.y);
+        dc.LineTo(acPosPix.x + 12, acPosPix.y + 6);
+    }
 
-		if (!AcisCorrelated && reportedGs < 1 && !ReleaseInProgress && !AcquireInProgress)
-			continue;
+    // Add screen object for hit testing, display, etc.
+    AddScreenObject(DRAWING_AC_SYMBOL, rt.GetCallsign(),
+                    { acPosPix.x - 5, acPosPix.y - 5, acPosPix.x + 5, acPosPix.y + 5 },
+                    false,
+                    AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetCallsign(),
+                    "", "", rt);
 
-		CPen qTrailPen(PS_SOLID, 1, ColorManager->get_corrected_color("symbol", Gdiplus::Color::White).ToCOLORREF());
-		CPen* pqOrigPen = dc.SelectObject(&qTrailPen);
-
-		if (RtPos.GetTransponderC()) {
-	    	const float scale = 0.1f;  // 10% of original size (really small)
-	   	Gdiplus::Point acShape[] = {
-		        { acPosPix.x + static_cast<int>(-22 * scale), acPosPix.y + static_cast<int>(-53 * scale) },
-		        { acPosPix.x + static_cast<int>(-12 * scale), acPosPix.y + static_cast<int>(-57 * scale) },
-		        { acPosPix.x + static_cast<int>(-5 * scale),  acPosPix.y + static_cast<int>(-55 * scale) },
-		        { acPosPix.x + static_cast<int>(6 * scale),   acPosPix.y + static_cast<int>(-42 * scale) },
-		        { acPosPix.x + static_cast<int>(12 * scale),  acPosPix.y + static_cast<int>(-29 * scale) },
-		        { acPosPix.x + static_cast<int>(16 * scale),  acPosPix.y + static_cast<int>(-12 * scale) },
-		        { acPosPix.x + static_cast<int>(26 * scale),  acPosPix.y + static_cast<int>(-8 * scale) },
-		        { acPosPix.x + static_cast<int>(40 * scale),  acPosPix.y + static_cast<int>(-8 * scale) },
-		        { acPosPix.x + static_cast<int>(49 * scale),  acPosPix.y + static_cast<int>(-7 * scale) },
-		        { acPosPix.x + static_cast<int>(59 * scale),  acPosPix.y + static_cast<int>(-2 * scale) },
-		        { acPosPix.x + static_cast<int>(65 * scale),  acPosPix.y + static_cast<int>(11 * scale) },
-		        { acPosPix.x + static_cast<int>(57 * scale),  acPosPix.y + static_cast<int>(19 * scale) },
-		        { acPosPix.x + static_cast<int>(40 * scale),  acPosPix.y + static_cast<int>(17 * scale) },
-		        { acPosPix.x + static_cast<int>(27 * scale),  acPosPix.y + static_cast<int>(17 * scale) },
-		        { acPosPix.x + static_cast<int>(21 * scale),  acPosPix.y + static_cast<int>(28 * scale) },
-		        { acPosPix.x + static_cast<int>(14 * scale),  acPosPix.y + static_cast<int>(45 * scale) },
-		        { acPosPix.x + static_cast<int>(4 * scale),   acPosPix.y + static_cast<int>(60 * scale) },
-		        { acPosPix.x + static_cast<int>(-7 * scale),  acPosPix.y + static_cast<int>(69 * scale) },
-		        { acPosPix.x + static_cast<int>(-18 * scale), acPosPix.y + static_cast<int>(66 * scale) },
-		        { acPosPix.x + static_cast<int>(-17 * scale), acPosPix.y + static_cast<int>(49 * scale) },
-		        { acPosPix.x + static_cast<int>(-9 * scale),  acPosPix.y + static_cast<int>(33 * scale) },
-		        { acPosPix.x + static_cast<int>(-8 * scale),  acPosPix.y + static_cast<int>(20 * scale) },
-		        { acPosPix.x + static_cast<int>(-38 * scale), acPosPix.y + static_cast<int>(18 * scale) },
-		        { acPosPix.x + static_cast<int>(-45 * scale), acPosPix.y + static_cast<int>(35 * scale) },
-		        { acPosPix.x + static_cast<int>(-54 * scale), acPosPix.y + static_cast<int>(39 * scale) },
-		        { acPosPix.x + static_cast<int>(-59 * scale), acPosPix.y + static_cast<int>(26 * scale) },
-		        { acPosPix.x + static_cast<int>(-60 * scale), acPosPix.y + static_cast<int>(2 * scale) },
-		        { acPosPix.x + static_cast<int>(-59 * scale), acPosPix.y + static_cast<int>(-17 * scale) },
-		        { acPosPix.x + static_cast<int>(-51 * scale), acPosPix.y + static_cast<int>(-25 * scale) },
-		        { acPosPix.x + static_cast<int>(-41 * scale), acPosPix.y + static_cast<int>(-22 * scale) },
-		        { acPosPix.x + static_cast<int>(-35 * scale), acPosPix.y + static_cast<int>(-10 * scale) },
-		        { acPosPix.x + static_cast<int>(-28 * scale), acPosPix.y + static_cast<int>(-10 * scale) },
-		        { acPosPix.x + static_cast<int>(-17 * scale), acPosPix.y + static_cast<int>(-10 * scale) },
-		        { acPosPix.x + static_cast<int>(-14 * scale), acPosPix.y + static_cast<int>(-17 * scale) },
-		        { acPosPix.x + static_cast<int>(-17 * scale), acPosPix.y + static_cast<int>(-29 * scale) },
-		        { acPosPix.x + static_cast<int>(-22 * scale), acPosPix.y + static_cast<int>(-40 * scale) }
-		    };
-		    SolidBrush brush(Color(255, 255, 255, 0)); // Yellow fill
-		    graphics.FillPolygon(&brush, acShape, sizeof(acShape) / sizeof(acShape[0]));
-		}
-		else {
-		    // Scale the lines too
-		    const int offset = max(1, static_cast<int>(4 * 0.1f));  // ensure offset is at least 1 pixel
-		    dc.MoveTo(acPosPix.x, acPosPix.y);
-		    dc.LineTo(acPosPix.x - offset, acPosPix.y - offset);
-		    dc.MoveTo(acPosPix.x, acPosPix.y);
-		    dc.LineTo(acPosPix.x + offset, acPosPix.y - offset);
-		    dc.MoveTo(acPosPix.x, acPosPix.y);
-		    dc.LineTo(acPosPix.x - offset, acPosPix.y + offset);
-		    dc.MoveTo(acPosPix.x, acPosPix.y);
-		    dc.LineTo(acPosPix.x + offset, acPosPix.y + offset);
-		}
-
-
-		// Predicted Track Line
-		// It starts 20 seconds away from the ac
-		if (reportedGs > 50 && PredictedLength > 0)
-		{
-			double d = double(rt.GetPosition().GetReportedGS()*0.514444) * 10;
-			CPosition AwayBase = BetterHarversine(rt.GetPosition().GetPosition(), rt.GetTrackHeading(), d);
-
-			d = double(rt.GetPosition().GetReportedGS()*0.514444) * (PredictedLength * 60) - 10;
-			CPosition PredictedEnd = BetterHarversine(AwayBase, rt.GetTrackHeading(), d);
-
-			dc.MoveTo(ConvertCoordFromPositionToPixel(AwayBase));
-			dc.LineTo(ConvertCoordFromPositionToPixel(PredictedEnd));
-		}
-
-		if (mouseWithin({ acPosPix.x - 5, acPosPix.y - 5, acPosPix.x + 5, acPosPix.y + 5 })) {
-			dc.MoveTo(acPosPix.x, acPosPix.y - 8);
-			dc.LineTo(acPosPix.x - 6, acPosPix.y - 12);
-			dc.MoveTo(acPosPix.x, acPosPix.y - 8);
-			dc.LineTo(acPosPix.x + 6, acPosPix.y - 12);
-
-			dc.MoveTo(acPosPix.x, acPosPix.y + 8);
-			dc.LineTo(acPosPix.x - 6, acPosPix.y + 12);
-			dc.MoveTo(acPosPix.x, acPosPix.y + 8);
-			dc.LineTo(acPosPix.x + 6, acPosPix.y + 12);
-
-			dc.MoveTo(acPosPix.x - 8, acPosPix.y );
-			dc.LineTo(acPosPix.x - 12, acPosPix.y -6);
-			dc.MoveTo(acPosPix.x - 8, acPosPix.y);
-			dc.LineTo(acPosPix.x - 12 , acPosPix.y + 6);
-
-			dc.MoveTo(acPosPix.x + 8, acPosPix.y);
-			dc.LineTo(acPosPix.x + 12, acPosPix.y - 6);
-			dc.MoveTo(acPosPix.x + 8, acPosPix.y);
-			dc.LineTo(acPosPix.x + 12, acPosPix.y + 6);
-		}
-
-		AddScreenObject(DRAWING_AC_SYMBOL, rt.GetCallsign(), { acPosPix.x - 5, acPosPix.y - 5, acPosPix.x + 5, acPosPix.y + 5 }, false, AcisCorrelated ? GetBottomLine(rt.GetCallsign()).c_str() : rt.GetSystemID());
-
-		dc.SelectObject(pqOrigPen);
-	}
+    dc.SelectObject(pqOrigPen);
+}
 
 #pragma endregion Drawing of the symbols
 
